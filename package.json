@@ -1,0 +1,43 @@
+{
+  "name": "copy-github-env",
+  "version": "1.0.0",
+  "description": "A CLI tool to copy variables and secrets between GitHub Actions environments.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "tsx index.ts",
+    "build": "tsc",
+    "dev": "tsx index.ts",
+    "lint": "biome lint ./src ./index.ts",
+    "format": "biome format --write ./src ./index.ts",
+    "ts:watch": "pnpm ts --watch",
+    "ts": "tsc --noEmit --skipLibCheck"
+  },
+  "keywords": [
+    "github",
+    "actions",
+    "environment",
+    "secrets",
+    "variables",
+    "cli"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@octokit/core": "^7.0.2",
+    "@octokit/rest": "^22.0.0",
+    "dotenv": "^16.5.0",
+    "libsodium-wrappers": "^0.7.15",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/libsodium-wrappers": "^0.7.14",
+    "@types/node": "^22.15.29",
+    "@types/prompts": "^2.4.9",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
