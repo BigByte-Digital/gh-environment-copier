@@ -1,9 +1,12 @@
 {
-  "name": "copy-github-env",
+  "name": "@bigbyte-digital/gh-env-cleaner",
   "version": "1.0.0",
   "description": "A CLI tool to copy variables and secrets between GitHub Actions environments.",
   "type": "module",
   "main": "dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsx index.ts",
@@ -12,7 +15,8 @@
     "lint": "biome lint ./src ./index.ts",
     "format": "biome format --write ./src ./index.ts",
     "ts:watch": "pnpm ts --watch",
-    "ts": "tsc --noEmit --skipLibCheck"
+    "ts": "tsc --noEmit --skipLibCheck",
+    "prepublishOnly": "pnpm build"
   },
   "keywords": [
     "github",

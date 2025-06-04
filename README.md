@@ -18,7 +18,7 @@ This tool helps maintain consistency and reduces manual effort when managing mul
 
 - Node.js (v16 or higher recommended)
 - pnpm (or npm/yarn)
-- A GitHub Personal Access Token (PAT) with the `repo` scope. This token is required to interact with the GitHub API for reading and writing environment variables and secrets.
+- A GitHub Personal Access Token (PAT) with the `repo` and `admin:org` (if required) scope. This token is required to interact with the GitHub API for reading and writing environment variables and secrets.
 
 ## Setup
 
