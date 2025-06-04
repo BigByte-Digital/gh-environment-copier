@@ -1,4 +1,4 @@
-# GitHub Environment Copier (gh-environment-copier)
+# GitHub Environment Cloner
 
 A command-line tool to simplify copying variables and secrets between GitHub Actions environments or from local `.env` files to a GitHub Actions environment.
 
@@ -62,7 +62,7 @@ This tool helps maintain consistency and reduces manual effort when managing mul
 
 The tool will then guide you through a series of prompts:
 
-- **Target Repository:** Enter the owner and repository name (e.g., `your-username/your-repo`).
+- **Target Repository:** Enter the owner and repository name (e.g., `BigByte-Digital/github-environment-cloner`).
 - **Target Environment Name:** Specify the GitHub Actions environment you want to configure (e.g., `production`, `staging`). The tool will create it if it doesn't exist.
 - **Source for Variables:** Choose whether to copy variables from another GitHub environment, import from a `.env` file, or skip.
 - **Source for Secrets:** Choose whether to copy secret names from another GitHub environment (you'll be prompted for values), import names and values from a `.env` file, or skip.
@@ -104,10 +104,24 @@ Follow the on-screen instructions to complete the process.
 - **Secret Encryption:** Secrets are encrypted client-side before being transmitted to GitHub. This means the raw secret values are never logged or sent unencrypted over the network by this tool after you input them.
 - **Prompting for Secret Values:** When copying secrets from another environment, the tool only copies names and then prompts you for the values. This is a security measure to avoid directly transferring potentially sensitive values without explicit user input.
 
+## Code of Conduct
+
+This project and everyone participating in it is governed by the [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue for any bugs, feature requests, or improvements.
+Contributions are welcome! We value feedback and contributions from the community. Please feel free to submit a pull request or open an issue for any bugs, feature requests, or improvements.
+
+For more detailed information on how to contribute, please see our [Contributing Guidelines](CONTRIBUTING.md).
+
+## Changelog
+
+Details of changes for each release are documented in the [CHANGELOG.md](CHANGELOG.md) file.
 
 ## License
 
 ISC (This is the default from the initial `package.json`, you can change it if needed)
+
+## Maintained By
+
+This project is maintained by [BigByte Digital](https://bigbyte.digital). We build software for people like you, get in touch.

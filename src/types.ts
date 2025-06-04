@@ -39,6 +39,9 @@ export interface SourceChoice {
 export interface UserInputs {
   repoFullName?: string;
   targetEnvName?: string;
+  action?: "copy" | "diff"; // Added action
+  sourceEnvName?: string; // Added for diff
+  compareEnvName?: string; // Added for diff
 }
 
 export interface FilePathResponse {
@@ -51,4 +54,23 @@ export interface SourceEnvNameResponse {
 
 export interface SecretValueResponse {
   val?: string;
+}
+
+// --- Diff Types ---
+export interface DiffReportVariables {
+  sourceOnly: Variable[];
+  compareOnly: Variable[];
+  valueChanged: { name: string; sourceValue: string; compareValue: string }[];
+}
+
+export interface DiffReportSecrets {
+  sourceOnlyNames: string[];
+  compareOnlyNames: string[];
+}
+
+export interface DiffResults {
+  variables: DiffReportVariables;
+  secrets: DiffReportSecrets;
+  sourceEnvName: string;
+  compareEnvName: string;
 }
