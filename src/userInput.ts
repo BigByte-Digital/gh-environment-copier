@@ -47,6 +47,7 @@ export async function getInitialUserInput(): Promise<UserInputs> {
     choices: [
       { title: "Copy/Sync environments", value: "copy" },
       { title: "Diff two environments", value: "diff" },
+      { title: "Export environment to file", value: "export" },
     ],
     initial: 0,
   });
@@ -125,6 +126,31 @@ export async function getInitialUserInput(): Promise<UserInputs> {
       })) as UserInputs;
       responses.targetEnvName = targetNameResponse.targetEnvName;
     }
+  } else if (responses.action === "export") {
+    // For export, we need the environment name to export and optionally a file path
+    if (!responses.targetEnvName) {
+      const exportQuestions: prompts.PromptObject<keyof UserInputs>[] = [
+        {
+          type: "text",
+          name: "targetEnvName",
+          message: "Enter the name of the environment to export:",
+        },
+        {
+          type: "text",
+          name: "exportFilePath",
+          message:
+            "Enter the output file path (optional, will auto-generate if empty):",
+          initial: "",
+        },
+      ];
+      const exportResponses = (await prompts(exportQuestions, {
+        onCancel: () => {
+          console.log("Operation cancelled by user.");
+        },
+      })) as UserInputs;
+      responses.targetEnvName = exportResponses.targetEnvName;
+      responses.exportFilePath = exportResponses.exportFilePath;
+    }
   }
 
   return {
@@ -133,6 +159,7 @@ export async function getInitialUserInput(): Promise<UserInputs> {
     targetEnvName: responses.targetEnvName,
     sourceEnvName: responses.sourceEnvName,
     compareEnvName: responses.compareEnvName,
+    exportFilePath: responses.exportFilePath,
   };
 }
 

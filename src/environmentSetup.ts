@@ -2,8 +2,12 @@ import {
   getEnvironment,
   createEnvironment,
   getEnvironmentPublicKey,
+  listVariables,
+  listSecrets,
 } from "./githubService";
-import type { GitHubEnvironment } from "./types";
+import type { GitHubEnvironment, Variable, Secret } from "./types";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 
 export async function ensureTargetEnvExists(
   owner: string,
@@ -31,10 +35,10 @@ export async function ensureTargetEnvExists(
       console.log(
         `✅ Target environment '${targetEnvName}' created (ID: ${targetEnv.id}).`
       );
-    } catch (createError: any) {
+    } catch (createError) {
       console.error(
         "❌ Error during target environment creation:",
-        createError.message
+        createError
       );
       return null;
     }
@@ -66,10 +70,74 @@ export async function fetchEnvironmentPublicKey(
     }
     console.log("✅ Public key fetched successfully.");
     return { key: publicKeyData.key, keyId: publicKeyData.key_id };
-  } catch (e: any) {
+  } catch (e) {
+    console.error("❌ Error fetching public key for target environment:", e);
+    return null;
+  }
+}
+
+export async function exportEnvironmentToFile(
+  owner: string,
+  repo: string,
+  environmentName: string,
+  outputFilePath?: string
+): Promise<string | null> {
+  try {
+    console.log(`\n📄 Exporting environment '${environmentName}' to file...`);
+
+    // Fetch variables and secrets
+    const [variables, secrets] = await Promise.all([
+      listVariables(owner, repo, environmentName),
+      listSecrets(owner, repo, environmentName),
+    ]);
+
+    // Generate output content
+    const timestamp = new Date().toISOString();
+    let output = `# GitHub Environment Export: ${environmentName}\n`;
+    output += `# Repository: ${owner}/${repo}\n`;
+    output += `# Generated on: ${timestamp}\n\n`;
+
+    // Export variables
+    output += `# Environment Variables (${variables.length} total)\n`;
+    if (variables.length > 0) {
+      output += "# Format: VARIABLE_NAME=value\n\n";
+      variables.forEach((variable: Variable) => {
+        output += `${variable.name}=${variable.value}\n`;
+      });
+    } else {
+      output += "# No variables found in this environment\n";
+    }
+    output += "\n";
+
+    // Export secret names (values are not accessible via API for security)
+    output += `# Secret Names (${secrets.length} total)\n`;
+    output += "# Note: Secret values are not exported for security reasons\n";
+    output += "# Format: SECRET_NAME= (you need to set values manually)\n\n";
+    if (secrets.length > 0) {
+      secrets.forEach((secret: Secret) => {
+        output += `${secret.name}=\n`;
+      });
+    } else {
+      output += "# No secrets found in this environment\n";
+    }
+
+    // Determine output file path
+    const finalOutputPath =
+      outputFilePath ||
+      path.join(process.cwd(), `${environmentName}-export-${Date.now()}.env`);
+
+    // Write to file
+    await fs.writeFile(finalOutputPath, output, { encoding: "utf8" });
+
+    console.log(`✅ Environment exported successfully to: ${finalOutputPath}`);
+    console.log(`   Variables exported: ${variables.length}`);
+    console.log(`   Secret names exported: ${secrets.length}`);
+
+    return finalOutputPath;
+  } catch (error) {
     console.error(
-      "❌ Error fetching public key for target environment:",
-      e.message
+      `❌ Error exporting environment '${environmentName}':`,
+      error
     );
     return null;
   }

@@ -49,9 +49,10 @@ export async function processVariables(
             `No variables found in source environment '${sourceEnvName}'.`
           );
         }
-      } catch (e: any) {
+      } catch (error) {
         console.error(
-          `Error fetching variables from source environment '${sourceEnvName}': ${e.message}`
+          `Error fetching variables from source environment '${sourceEnvName}'`,
+          error
         );
       }
     } else {

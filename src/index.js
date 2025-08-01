@@ -1,9 +1,9 @@
-"use strict";
+
 require('dotenv').config();
-const { getInitialUserInput, getVariableSourceChoice, getSecretSourceChoice } = require('./src/userInput');
-const { ensureTargetEnvExists, fetchEnvironmentPublicKey } = require('./src/environmentSetup');
-const { processVariables } = require('./src/variablesManager');
-const { processSecrets } = require('./src/secretsManager');
+const { getInitialUserInput, getVariableSourceChoice, getSecretSourceChoice } = require('./userInput');
+const { ensureTargetEnvExists, fetchEnvironmentPublicKey } = require('./environmentSetup');
+const { processVariables } = require('./variablesManager');
+const { processSecrets } = require('./secretsManager');
 async function main() {
     const { repoFullName, targetEnvName } = await getInitialUserInput();
     if (!repoFullName || !targetEnvName) {
@@ -27,7 +27,7 @@ async function main() {
     }
     // --- Secrets Processing ---
     console.log(`\n🔑 Processing Secrets for target environment '${targetEnvName}'...`);
-    let secretSourceChoice = await getSecretSourceChoice(); // Made mutable
+    const secretSourceChoice = await getSecretSourceChoice(); // Made mutable
     let publicKeyInfo = null;
     if (secretSourceChoice.source !== 'skip') {
         publicKeyInfo = await fetchEnvironmentPublicKey(owner, repo, targetEnvName);
@@ -50,7 +50,7 @@ async function main() {
 }
 main().catch(err => {
     console.error("\nAn unexpected error occurred:", err.message);
-    if (err.response && err.response.data) {
+    if (err.response?.data) {
         console.error("GitHub API Error:", JSON.stringify(err.response.data, null, 2));
     }
     // For more detailed stack trace if needed:

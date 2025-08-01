@@ -1,4 +1,4 @@
-import * as fs from "fs/promises";
+import * as fs from "node:fs/promises";
 import { parse as dotenvParse } from "dotenv"; // Changed to named import for clarity
 import type { Variable } from "./types.js"; // Added .js and made import type-only
 
@@ -12,13 +12,14 @@ export async function parseEnvFile(
       name,
       value: value as string,
     }));
-  } catch (error: any) {
-    if (error.code === "ENOENT") {
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error as NodeJS.ErrnoException).code === "ENOENT"
+    ) {
       console.warn(`⚠️ File not found at '${filePath}'.`);
     } else {
-      console.error(
-        `Error reading or parsing file at '${filePath}': ${error.message}`
-      );
+      console.error(`Error reading or parsing file at '${filePath}'`, error);
     }
     return null;
   }

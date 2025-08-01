@@ -10,6 +10,8 @@ This tool helps maintain consistency and reduces manual effort when managing mul
 - Copy secret names from one GitHub Actions environment to another (values will be prompted for security).
 - Import variables from a local `.env` file to a GitHub Actions environment.
 - Import secrets (names and values) from a local `.env` file to a GitHub Actions environment.
+- **Export all environment variables and secret names from a GitHub Actions environment to a file.**
+- Compare and diff two GitHub Actions environments to see differences.
 - Interactive prompts for easy input and selection.
 - Securely handles GitHub Personal Access Tokens (PATs) via `.env` file.
 - Encrypts secrets before sending them to GitHub using `libsodium-wrappers`.
@@ -62,10 +64,31 @@ This tool helps maintain consistency and reduces manual effort when managing mul
 
 The tool will then guide you through a series of prompts:
 
-- **Target Repository:** Enter the owner and repository name (e.g., `BigByte-Digital/github-environment-cloner`).
-- **Target Environment Name:** Specify the GitHub Actions environment you want to configure (e.g., `production`, `staging`). The tool will create it if it doesn't exist.
-- **Source for Variables:** Choose whether to copy variables from another GitHub environment, import from a `.env` file, or skip.
-- **Source for Secrets:** Choose whether to copy secret names from another GitHub environment (you'll be prompted for values), import names and values from a `.env` file, or skip.
+1. **Action Selection:** Choose what you want to do:
+
+   - **Copy/Sync environments:** Copy variables and secrets between environments
+   - **Diff two environments:** Compare two environments to see differences
+   - **Export environment to file:** Export all variables and secret names to a file
+
+2. **Repository Information:** Enter the owner and repository name (e.g., `BigByte-Digital/github-environment-cloner`).
+
+3. **Environment-specific prompts** depending on your chosen action:
+
+   **For Copy/Sync:**
+
+   - **Target Environment Name:** Specify the GitHub Actions environment you want to configure (e.g., `production`, `staging`). The tool will create it if it doesn't exist.
+   - **Source for Variables:** Choose whether to copy variables from another GitHub environment, import from a `.env` file, or skip.
+   - **Source for Secrets:** Choose whether to copy secret names from another GitHub environment (you'll be prompted for values), import names and values from a `.env` file, or skip.
+
+   **For Diff:**
+
+   - **Source Environment:** The first environment to compare
+   - **Compare Environment:** The second environment to compare against
+
+   **For Export:**
+
+   - **Environment Name:** The environment to export
+   - **Output File Path:** Optional custom path for the export file (auto-generated if empty)
 
 Follow the on-screen instructions to complete the process.
 

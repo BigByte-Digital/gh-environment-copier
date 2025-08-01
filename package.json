@@ -9,11 +9,11 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsx index.ts",
+    "start": "tsx src/index.ts",
     "build": "tsc",
-    "dev": "tsx index.ts",
-    "lint": "biome lint ./src ./index.ts",
-    "format": "biome format --write ./src ./index.ts",
+    "lint": "biome lint ./src",
+    "lint:fix": "biome lint --error-on-warnings --write ./src",
+    "format": "biome format --write ./src",
     "ts:watch": "pnpm ts --watch",
     "ts": "tsc --noEmit --skipLibCheck",
     "prepublishOnly": "pnpm build"

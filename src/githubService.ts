@@ -107,9 +107,9 @@ export async function createOrUpdateVariable(
       value: value,
     });
     console.log(`  Variable '${variable_name}' set in '${environment_name}'.`);
-  } catch (error: any) {
+  } catch (error) {
     // Keeping any here as the error structure for "already exists" might be specific
-    if (error.message && error.message.includes("already exists")) {
+    if (error instanceof Error && error.message?.includes("already exists")) {
       try {
         await octokit.rest.actions.updateEnvironmentVariable({
           owner,
@@ -153,7 +153,7 @@ export async function listSecrets(
         per_page: 100,
       }
     );
-    return secrets.map((s: any) => ({ name: s.name, value: "" })) as Secret[]; // Secrets list doesn't return values
+    return secrets.map((s) => ({ name: s.name, value: "" }));
   } catch (error) {
     const octokitError = error as OctokitError;
     console.error(
@@ -200,7 +200,7 @@ export async function createOrUpdateSecret(
       `  Error setting/updating secret '${secret_name}' in '${environment_name}':`,
       octokitError.message
     );
-    if (octokitError.response && octokitError.response.data) {
+    if (octokitError.response?.data) {
       console.error(
         "  Full error details:",
         JSON.stringify(octokitError.response.data)

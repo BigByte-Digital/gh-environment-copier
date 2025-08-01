@@ -43,9 +43,13 @@ export async function performEnvDiff(
 
     for (const [name, sourceValue] of sourceVarsMap) {
       if (compareVarsMap.has(name)) {
-        const compareValue = compareVarsMap.get(name)!;
+        const compareValue = compareVarsMap.get(name);
         if (sourceValue !== compareValue) {
-          diffResultVars.valueChanged.push({ name, sourceValue, compareValue });
+          diffResultVars.valueChanged.push({
+            name,
+            sourceValue,
+            compareValue: compareValue as string,
+          });
         }
       } else {
         diffResultVars.sourceOnly.push({ name, value: sourceValue });
@@ -83,8 +87,8 @@ export async function performEnvDiff(
       sourceEnvName,
       compareEnvName,
     };
-  } catch (error: any) {
-    console.error(`❌ Error during environment diff: ${error.message}`);
+  } catch (error) {
+    console.error("❌ Error during environment diff", error);
     return null;
   }
 }
@@ -203,7 +207,7 @@ export function generateEnvFileContent(results: DiffResults): void {
   if (!changesMade) {
     output += `# No differences found that require updating '${compareEnvName}' based on '${sourceEnvName}', or items only in '${compareEnvName}'.\n`;
   }
-  output += `# End of generated .env content.\n`;
+  output += "# End of generated .env content.\n";
 
   console.log("\n--- Recommended .env content (copy and paste below) ---");
   console.log(output);

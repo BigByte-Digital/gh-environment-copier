@@ -39,9 +39,10 @@ export interface SourceChoice {
 export interface UserInputs {
   repoFullName?: string;
   targetEnvName?: string;
-  action?: "copy" | "diff"; // Added action
+  action?: "copy" | "diff" | "export"; // Added export action
   sourceEnvName?: string; // Added for diff
   compareEnvName?: string; // Added for diff
+  exportFilePath?: string; // Added for export
 }
 
 export interface FilePathResponse {
