@@ -45,6 +45,15 @@ This tool helps maintain consistency and reduces manual effort when managing mul
     ```
     **Important:** Add `.env` to your `.gitignore` file to prevent accidentally committing your PAT.
 
+### Authentication options
+
+The tool resolves a GitHub token in this order:
+
+1. **`GITHUB_TOKEN`** in your `.env` file — a PAT with the `repo` scope (and `admin:org` if needed). Highest priority.
+2. **GitHub CLI** — if `GITHUB_TOKEN` is not set and you have the [GitHub CLI](https://cli.github.com/) installed and logged in (`gh auth login`), the tool reuses its token automatically. No PAT required.
+
+If neither is available, the tool prints guidance and exits.
+
 ## Usage
 
 1.  **Build the TypeScript code (if you made changes or are running for the first time after setup):**

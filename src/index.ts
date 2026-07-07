@@ -3,15 +3,16 @@ import {
   ensureTargetEnvExists,
   fetchEnvironmentPublicKey,
   exportEnvironmentToFile,
-} from "./environmentSetup";
-import { processSecrets } from "./secretsManager";
+} from "./environmentSetup.js";
+import { processSecrets } from "./secretsManager.js";
 import {
   getInitialUserInput,
   getVariableSourceChoice,
   getSecretSourceChoice,
-} from "./userInput";
-import { processVariables } from "./variablesManager";
-import { performEnvDiff, displayDiffResultsConsole } from "./diffManager";
+} from "./userInput.js";
+import { processVariables } from "./variablesManager.js";
+import { performEnvDiff, displayDiffResultsConsole } from "./diffManager.js";
+import { AuthError } from './auth.js';
 
 async function main() {
   const userInput = await getInitialUserInput();
@@ -151,16 +152,14 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("\nAn unexpected error occurred:", err.message);
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  const anyErr = err as any;
-  if (anyErr.response?.data) {
-    // Using optional chaining
-    console.error(
-      "GitHub API Error:",
-      JSON.stringify(anyErr.response.data, null, 2)
-    );
+  if (err instanceof AuthError) {
+    console.error(`\n${err.message}`);
+    process.exit(1);
   }
-  // For more detailed stack trace if needed:
-  // console.error(err.stack);
+  console.error('\nAn unexpected error occurred:', err.message);
+  const apiErr = err as { response?: { data?: unknown } };
+  if (apiErr.response?.data) {
+    console.error('GitHub API Error:', JSON.stringify(apiErr.response.data, null, 2));
+  }
+  process.exit(1);
 });
