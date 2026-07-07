@@ -6,10 +6,8 @@ export interface GitHubEnvironment {
   html_url: string;
   created_at: string;
   updated_at: string;
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  protection_rules?: Array<any>; // Define more specific type if needed
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  deployment_branch_policy?: any; // Define more specific type if needed
+  protection_rules?: unknown[];
+  deployment_branch_policy?: unknown;
 }
 
 export interface GitHubPublicKey {
@@ -20,8 +18,7 @@ export interface GitHubPublicKey {
 export interface OctokitError extends Error {
   status?: number;
   response?: {
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    data: any;
+    data?: unknown;
   };
 }
 
@@ -30,7 +27,7 @@ export interface Variable {
   value: string;
 }
 
-export interface Secret extends Variable {}
+export type Secret = Variable;
 
 export interface SourceChoice {
   source: "env" | "file" | "skip";

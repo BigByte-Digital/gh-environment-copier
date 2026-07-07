@@ -4,8 +4,8 @@ import {
   getEnvironmentPublicKey,
   listVariables,
   listSecrets,
-} from "./githubService";
-import type { GitHubEnvironment, Variable, Secret } from "./types";
+} from "./githubService.js";
+import type { GitHubEnvironment, Variable, Secret } from "./types.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 

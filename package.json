@@ -26,7 +26,7 @@
     "variables",
     "cli"
   ],
-  "author": "",
+  "author": "BigByte Digital",
   "license": "ISC",
   "dependencies": {
     "@octokit/core": "^7.0.2",
