@@ -1,4 +1,5 @@
 import { Octokit } from "@octokit/rest";
+import { resolveGitHubToken } from "./auth.js";
 import { encryptSecret } from "./encryptionUtils.js";
 import type {
   GitHubEnvironment,
@@ -8,14 +9,22 @@ import type {
   OctokitError,
 } from "./types.js";
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+let octokitPromise: Promise<Octokit> | null = null;
 
-if (!GITHUB_TOKEN) {
-  console.error("Error: GITHUB_TOKEN not found in .env file.");
-  process.exit(1);
+async function getOctokit(): Promise<Octokit> {
+  if (!octokitPromise) {
+    octokitPromise = resolveGitHubToken().then(
+      ({ token }) => new Octokit({ auth: token })
+    );
+  }
+  return octokitPromise;
 }
 
-const octokit = new Octokit({ auth: GITHUB_TOKEN });
+function handleOctokitError(context: string, error: unknown): never {
+  const octokitError = error as OctokitError;
+  console.error(`${context}:`, octokitError.message ?? String(error));
+  throw octokitError;
+}
 
 export async function getEnvironment(
   owner: string,
@@ -23,6 +32,7 @@ export async function getEnvironment(
   environment_name: string
 ): Promise<GitHubEnvironment | null> {
   try {
+    const octokit = await getOctokit();
     const { data: environment } = await octokit.rest.repos.getEnvironment({
       owner,
       repo,
@@ -30,15 +40,10 @@ export async function getEnvironment(
     });
     return environment as GitHubEnvironment;
   } catch (error) {
-    const octokitError = error as OctokitError;
-    if (octokitError.status === 404) {
+    if ((error as OctokitError).status === 404) {
       return null; // Environment not found is a valid case
     }
-    console.error(
-      `Error getting environment '${environment_name}':`,
-      octokitError.message
-    );
-    throw octokitError;
+    handleOctokitError(`Error getting environment '${environment_name}'`, error);
   }
 }
 
@@ -48,6 +53,7 @@ export async function createEnvironment(
   environment_name: string
 ): Promise<void> {
   try {
+    const octokit = await getOctokit();
     console.log(`Creating environment '${environment_name}'...`);
     await octokit.rest.repos.createOrUpdateEnvironment({
       owner,
@@ -56,12 +62,7 @@ export async function createEnvironment(
     });
     console.log(`Environment '${environment_name}' created successfully.`);
   } catch (error) {
-    const octokitError = error as OctokitError;
-    console.error(
-      `Error creating environment '${environment_name}':`,
-      octokitError.message
-    );
-    throw octokitError;
+    handleOctokitError(`Error creating environment '${environment_name}'`, error);
   }
 }
 
@@ -71,6 +72,7 @@ export async function listVariables(
   environment_name: string
 ): Promise<Variable[]> {
   try {
+    const octokit = await getOctokit();
     const variables = await octokit.paginate(
       octokit.rest.actions.listEnvironmentVariables,
       {
@@ -82,12 +84,10 @@ export async function listVariables(
     );
     return variables as Variable[];
   } catch (error) {
-    const octokitError = error as OctokitError;
-    console.error(
-      `Error listing variables for environment '${environment_name}':`,
-      octokitError.message
+    handleOctokitError(
+      `Error listing variables for environment '${environment_name}'`,
+      error
     );
-    throw octokitError;
   }
 }
 
@@ -99,6 +99,7 @@ export async function createOrUpdateVariable(
   value: string
 ): Promise<void> {
   try {
+    const octokit = await getOctokit();
     await octokit.rest.actions.createEnvironmentVariable({
       owner,
       repo,
@@ -111,6 +112,7 @@ export async function createOrUpdateVariable(
     // Keeping any here as the error structure for "already exists" might be specific
     if (error instanceof Error && error.message?.includes("already exists")) {
       try {
+        const octokit = await getOctokit();
         await octokit.rest.actions.updateEnvironmentVariable({
           owner,
           repo,
@@ -144,6 +146,7 @@ export async function listSecrets(
   environment_name: string
 ): Promise<Secret[]> {
   try {
+    const octokit = await getOctokit();
     const secrets = await octokit.paginate(
       octokit.rest.actions.listEnvironmentSecrets,
       {
@@ -155,12 +158,10 @@ export async function listSecrets(
     );
     return secrets.map((s) => ({ name: s.name, value: "" }));
   } catch (error) {
-    const octokitError = error as OctokitError;
-    console.error(
-      `Error listing secrets for environment '${environment_name}':`,
-      octokitError.message
+    handleOctokitError(
+      `Error listing secrets for environment '${environment_name}'`,
+      error
     );
-    throw octokitError;
   }
 }
 
@@ -174,6 +175,7 @@ export async function createOrUpdateSecret(
   environment_public_key_id: string
 ): Promise<void> {
   try {
+    const octokit = await getOctokit();
     const encryptedValue = await encryptSecret(value, environment_public_key);
 
     await octokit.rest.actions.createOrUpdateEnvironmentSecret({
@@ -218,6 +220,7 @@ export async function getEnvironmentPublicKey(
   environment_name: string
 ): Promise<GitHubPublicKey | null> {
   try {
+    const octokit = await getOctokit();
     const { data } = await octokit.rest.actions.getEnvironmentPublicKey({
       owner,
       repo,
@@ -225,11 +228,9 @@ export async function getEnvironmentPublicKey(
     });
     return { key: data.key, key_id: data.key_id } as GitHubPublicKey;
   } catch (error) {
-    const octokitError = error as OctokitError;
-    console.error(
-      `Error getting public key for environment '${environment_name}':`,
-      octokitError.message
+    handleOctokitError(
+      `Error getting public key for environment '${environment_name}'`,
+      error
     );
-    throw octokitError;
   }
 }
