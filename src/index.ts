@@ -13,8 +13,13 @@ import {
 import { processVariables } from "./variablesManager.js";
 import { performEnvDiff, displayDiffResultsConsole } from "./diffManager.js";
 import { AuthError } from './auth.js';
+import { getOctokit } from './githubService.js';
 
 async function main() {
+  // Resolve GitHub auth up front (env token -> gh CLI). A missing token throws
+  // AuthError here, so every action surfaces clean guidance and exits non-zero,
+  // instead of being swallowed by the diff/export try-catch blocks below.
+  await getOctokit();
   const userInput = await getInitialUserInput();
   const {
     action,

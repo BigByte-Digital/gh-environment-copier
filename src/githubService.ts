@@ -11,7 +11,7 @@ import type {
 
 let octokitPromise: Promise<Octokit> | null = null;
 
-async function getOctokit(): Promise<Octokit> {
+export async function getOctokit(): Promise<Octokit> {
   if (!octokitPromise) {
     octokitPromise = resolveGitHubToken().then(
       ({ token }) => new Octokit({ auth: token })

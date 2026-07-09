@@ -13,33 +13,6 @@ export async function getInitialUserInput(): Promise<UserInputs> {
   const repoFullNameFromEnv = process.env.REPO_FULL_NAME;
   const questions: prompts.PromptObject<keyof UserInputs>[] = [];
 
-  // Check for GITHUB_TOKEN and offer to help create it
-  if (!process.env.GITHUB_TOKEN) {
-    const tokenSetup = await prompts({
-      type: "confirm",
-      name: "setupToken",
-      message:
-        "It seems GITHUB_TOKEN is not set in your .env file. Would you like guidance on creating one and adding it?",
-      initial: true,
-    });
-    if (tokenSetup.setupToken) {
-      await offerTokenCreationGuidance();
-      // Re-check after guidance
-      // Note: This requires the user to manually update .env and restart the script,
-      // or for the script to dynamically reload .env, which is more complex.
-      // For simplicity, we'll instruct them to restart.
-      console.log(
-        "Please update your .env file with the GITHUB_TOKEN and restart the script."
-      );
-      process.exit(0);
-    } else {
-      console.log(
-        "GITHUB_TOKEN is required to interact with the GitHub API. Please set it in your .env file."
-      );
-      process.exit(1);
-    }
-  }
-
   questions.push({
     type: "select",
     name: "action",
