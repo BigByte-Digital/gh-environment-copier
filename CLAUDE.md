@@ -25,8 +25,11 @@ runs `pnpm lint` + `pnpm build` on pushes/PRs to `main`, so keep both green.
 
 ## Runtime requirements
 
-- `GITHUB_TOKEN` must be set (in `.env`) — a PAT with `repo` scope. `githubService.ts` calls
-  `process.exit(1)` at import time if it's missing.
+- A GitHub token is resolved by `src/auth.ts::resolveGitHubToken()` in priority order:
+  `GITHUB_TOKEN` env (a PAT with `repo` scope, typically in `.env`) → `gh auth token` (the GitHub CLI,
+  if installed and logged in) → an `AuthError`. So `GITHUB_TOKEN` is optional when `gh` is authenticated.
+  `main()` primes auth up front via `getOctokit()` so the `AuthError` guidance prints and the process
+  exits non-zero for every action.
 - `REPO_FULL_NAME` (optional) pre-fills the `owner/repo` prompt.
 
 ## Architecture
@@ -37,10 +40,15 @@ three `action`s (`copy` | `diff` | `export`):
 - **`userInput.ts`** — all `prompts`-based interaction. `getInitialUserInput()` returns a `UserInputs`
   object; the remaining exports are per-step prompt helpers (`getFilePath`, `getSourceEnvName`,
   `getSecretValue`, source-choice pickers) that the manager modules call mid-flow.
+- **`auth.ts`** — token resolution only. `resolveGitHubToken()` returns `{ token, source: 'env' | 'gh' }`
+  or throws `AuthError`; `env`/`getGhToken` are injectable for testing. The `gh` path shells out to
+  `gh auth token` and treats gh-missing/not-logged-in as "unavailable" (falls through, never errors).
 - **`githubService.ts`** — the **only** module that constructs `Octokit` and touches the GitHub API
   (`getEnvironment`, `createEnvironment`, `list/createOrUpdate` for variables & secrets, public-key
-  fetch). Everything else goes through it. `getEnvironment` returns `null` on 404 (a valid "not found"),
-  but re-throws other errors.
+  fetch). Octokit is built **lazily** via the exported, memoized `getOctokit()` (which calls
+  `resolveGitHubToken()`) — no import-time side effects. Throwing paths funnel through
+  `handleOctokitError`; `getEnvironment` returns `null` on 404, and `createOrUpdate{Variable,Secret}`
+  intentionally log-and-continue (do **not** throw).
 - **`variablesManager.ts` / `secretsManager.ts`** — resolve the chosen source (`env` GitHub environment,
   local `file`, or `skip`), then create/update entries in the target env. Secrets copied from another
   environment carry **names only** — the tool re-prompts for each value (GitHub never exposes secret
@@ -56,13 +64,14 @@ three `action`s (`copy` | `diff` | `export`):
 
 ## Conventions & gotchas
 
-- **ESM project** (`"type": "module"`, `moduleResolution: bundler`). Relative imports are written with
-  explicit `.js` extensions in some files and without in others — both currently resolve under `tsx`/
-  bundler resolution, but match the neighboring file when editing.
+- **ESM project** (`"type": "module"`, `moduleResolution: bundler`). Relative imports **must** end in
+  `.js` (even though the source is `.ts`) — e.g. `import { resolveGitHubToken } from './auth.js'`.
 - Biome config: single quotes, trailing commas, 120-char width, space indent. `noForEach` is disabled.
-  Run `pnpm format` / `pnpm lint:fix` before committing.
-- **`src/index.js` is a stale, unused CommonJS artifact** (older code, `require(...)`, no diff/export).
-  Nothing imports it — the real entry is `src/index.ts`. Don't edit it; consider it dead.
+  Note `pnpm lint` (`biome lint`) does **not** enforce quote style — that's a formatter rule; run
+  `pnpm format` to normalize. Most existing files predate the single-quote config and use double quotes.
+- `userInput.ts::offerTokenCreationGuidance()` is currently **exported but unreferenced** — it was the
+  old interactive "no token → walk me through creating a PAT" flow, orphaned when auth moved to
+  `auth.ts`. Delete it or re-wire it into the `AuthError` path.
 - User-facing status uses emoji `console.log` (✅ ❌ ℹ️ 🎉) — keep that style for consistency.
 
 ## Releases
