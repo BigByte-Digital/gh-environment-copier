@@ -49,9 +49,12 @@ async function promptFromChoices(
   return response.value;
 }
 
+// GitHub owner and repository names are limited to these characters, so anything else --
+// whitespace in particular -- is rejected before it can reach the API as a confusing 404.
+const REPO_FULL_NAME_PATTERN = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+
 export function isRepoFullName(value: string): boolean {
-  const [owner, repo, ...rest] = value.split('/');
-  return Boolean(owner) && Boolean(repo) && rest.length === 0;
+  return REPO_FULL_NAME_PATTERN.test(value.trim());
 }
 
 function validateRepoFullName(value: string): true | string {
