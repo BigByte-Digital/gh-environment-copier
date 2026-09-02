@@ -53,8 +53,12 @@ export async function importFromFile(owner: string, repo: string, targetEnvName:
   const variables = entries.filter((entry) => classification.get(entry.name) === 'variable');
   const secrets = entries.filter((entry) => classification.get(entry.name) === 'secret');
 
-  const existingNames = new Set((await listVariables(owner, repo, targetEnvName)).map((variable) => variable.name));
-  const strays = secrets.map((secret) => secret.name).filter((name) => existingNames.has(name));
+  let strays: string[] = [];
+  if (secrets.length > 0) {
+    const existing = await listVariables(owner, repo, targetEnvName);
+    const existingNames = new Set(existing.map((variable) => variable.name));
+    strays = secrets.map((secret) => secret.name).filter((name) => existingNames.has(name));
+  }
   const removeStrays = strays.length > 0 && (await confirmStrayDeletion(strays, targetEnvName));
 
   if (variables.length > 0) {

@@ -109,10 +109,8 @@ async function main() {
   // A file supplies both kinds of entry, so it is classified in one pass and the separate
   // SECRETS question is not asked.
   if (variableSourceChoice.source === "file") {
+    // importFromFile reports its own outcome, including the paths that write nothing.
     await importFromFile(owner, repo, targetEnvName);
-    console.log(
-      `\n🎉 Process finished for target environment '${targetEnvName}' in '${owner}/${repo}'.`
-    );
     return;
   }
 
