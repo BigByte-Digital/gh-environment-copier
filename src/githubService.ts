@@ -30,6 +30,8 @@ function handleOctokitError(context: string, error: unknown): never {
 // anything past it is still reachable through manual entry.
 const MAX_REPOSITORY_PAGES = 5;
 
+const ENVIRONMENTS_PER_PAGE = 100;
+
 export async function listRepositories(): Promise<string[]> {
   try {
     const octokit = await getOctokit();
@@ -57,12 +59,28 @@ export async function listRepositories(): Promise<string[]> {
 export async function listEnvironments(owner: string, repo: string): Promise<string[]> {
   try {
     const octokit = await getOctokit();
-    const { data } = await octokit.rest.repos.getAllEnvironments({
-      owner,
-      repo,
-      per_page: 100,
-    });
-    return (data.environments ?? []).map((environment) => environment.name);
+    // getAllEnvironments wraps its list in { total_count, environments }, a shape
+    // octokit.paginate does not normalize, so pages are walked explicitly.
+    const names: string[] = [];
+    let page = 1;
+
+    while (true) {
+      const { data } = await octokit.rest.repos.getAllEnvironments({
+        owner,
+        repo,
+        per_page: ENVIRONMENTS_PER_PAGE,
+        page,
+      });
+      const batch = data.environments ?? [];
+      names.push(...batch.map((environment) => environment.name));
+
+      if (batch.length < ENVIRONMENTS_PER_PAGE || names.length >= (data.total_count ?? names.length)) {
+        break;
+      }
+      page += 1;
+    }
+
+    return names;
   } catch (error) {
     const status = (error as OctokitError).status;
     // A repository with no environments, or a token without visibility of them, yields an

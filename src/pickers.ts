@@ -6,10 +6,10 @@ import { listEnvironments, listRepositories } from './githubService.js';
 // Sentinel choice values. Neither form is a legal repository name, environment name or
 // file path, so they never collide with a real entry in any of the lists below.
 const MANUAL_ENTRY = '<manual-entry>';
-const CREATE_NEW = '<create-new>';
 
 const MANUAL_PATH_TITLE = '-- type a path manually --';
 const MANUAL_REPO_TITLE = '-- type owner/repo manually --';
+const MANUAL_ENV_TITLE = '-- type an environment name manually --';
 const CREATE_ENV_TITLE = '-- create a new environment --';
 
 type PickerChoice = prompts.Choice & { value: string };
@@ -125,14 +125,21 @@ export async function pickEnvironment(
     return promptForText(message);
   }
 
+  // An environment hidden by permissions is still reachable by name, so the manual entry
+  // is offered whether or not the caller can create one.
   const choices: PickerChoice[] = [
     ...environments.map((name) => ({ title: name, value: name })),
-    ...(options.allowCreate ? [{ title: CREATE_ENV_TITLE, value: CREATE_NEW }] : []),
+    { title: options.allowCreate ? CREATE_ENV_TITLE : MANUAL_ENV_TITLE, value: MANUAL_ENTRY },
   ];
 
   const selected = await promptFromChoices(message, choices, false);
   if (selected === undefined) {
     return undefined;
   }
-  return selected === CREATE_NEW ? promptForText('Enter a name for the new environment:') : selected;
+  if (selected !== MANUAL_ENTRY) {
+    return selected;
+  }
+  return promptForText(
+    options.allowCreate ? 'Enter a name for the new environment:' : 'Enter the environment name:',
+  );
 }
