@@ -17,6 +17,15 @@ const VIEWPORT = 12;
 const HIDE_CURSOR = '\u001b[?25l';
 const SHOW_CURSOR = '\u001b[?25h';
 
+const YELLOW = '\u001b[33m';
+const DIM = '\u001b[2m';
+const RESET = '\u001b[0m';
+
+// Deliberately different silhouettes rather than the two padlock glyphs, which are the same
+// shape at terminal sizes. Both are default-emoji and double width, so the rows stay aligned.
+const SECRET_ICON = '\u{1F512}';
+const VARIABLE_ICON = '\u{1F4C4}';
+
 interface Row {
   name: string;
   kind: EntryKind;
@@ -28,9 +37,10 @@ function buildLines(rows: Row[], cursor: number, offset: number): string[] {
   const visible = rows.slice(offset, offset + VIEWPORT);
   visible.forEach((row, index) => {
     const isCursor = offset + index === cursor;
-    const icon = row.kind === 'secret' ? '🔒' : '🔓';
-    const letter = row.kind === 'secret' ? 's' : 'v';
-    lines.push(`${isCursor ? '❯' : ' '} ${icon} ${letter}  ${row.name}`);
+    const isSecret = row.kind === 'secret';
+    const icon = isSecret ? SECRET_ICON : VARIABLE_ICON;
+    const marker = isSecret ? `${YELLOW}s${RESET}` : `${DIM}v${RESET}`;
+    lines.push(`${isCursor ? '❯' : ' '} ${icon} ${marker}  ${row.name}`);
   });
 
   const remaining = rows.length - (offset + visible.length);
