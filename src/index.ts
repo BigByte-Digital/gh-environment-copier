@@ -4,6 +4,7 @@ import {
   fetchEnvironmentPublicKey,
   exportEnvironmentToFile,
 } from "./environmentSetup.js";
+import { importFromFile } from "./importFromFile.js";
 import { processSecrets } from "./secretsManager.js";
 import {
   getInitialUserInput,
@@ -104,6 +105,17 @@ async function main() {
     `\n📋 Processing Variables for target environment '${targetEnvName}'...`
   );
   const variableSourceChoice = await getVariableSourceChoice();
+
+  // A file supplies both kinds of entry, so it is classified in one pass and the separate
+  // SECRETS question is not asked.
+  if (variableSourceChoice.source === "file") {
+    await importFromFile(owner, repo, targetEnvName);
+    console.log(
+      `\n🎉 Process finished for target environment '${targetEnvName}' in '${owner}/${repo}'.`
+    );
+    return;
+  }
+
   if (variableSourceChoice.source !== "skip") {
     await processVariables(owner, repo, targetEnvName, variableSourceChoice);
   } else {
