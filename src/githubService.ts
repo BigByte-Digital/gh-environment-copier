@@ -26,6 +26,54 @@ function handleOctokitError(context: string, error: unknown): never {
   throw octokitError;
 }
 
+// A page cap keeps the picker responsive on accounts with thousands of repositories;
+// anything past it is still reachable through manual entry.
+const MAX_REPOSITORY_PAGES = 5;
+
+export async function listRepositories(): Promise<string[]> {
+  try {
+    const octokit = await getOctokit();
+    const names: string[] = [];
+    let pagesFetched = 0;
+
+    for await (const response of octokit.paginate.iterator(octokit.rest.repos.listForAuthenticatedUser, {
+      per_page: 100,
+      sort: "pushed",
+      affiliation: "owner,collaborator,organization_member",
+    })) {
+      names.push(...response.data.map((repository) => repository.full_name));
+      pagesFetched += 1;
+      if (pagesFetched >= MAX_REPOSITORY_PAGES) {
+        break;
+      }
+    }
+
+    return names;
+  } catch (error) {
+    handleOctokitError("Error listing repositories", error);
+  }
+}
+
+export async function listEnvironments(owner: string, repo: string): Promise<string[]> {
+  try {
+    const octokit = await getOctokit();
+    const { data } = await octokit.rest.repos.getAllEnvironments({
+      owner,
+      repo,
+      per_page: 100,
+    });
+    return (data.environments ?? []).map((environment) => environment.name);
+  } catch (error) {
+    const status = (error as OctokitError).status;
+    // A repository with no environments, or a token without visibility of them, yields an
+    // empty list so callers can fall back to manual entry.
+    if (status === 403 || status === 404) {
+      return [];
+    }
+    handleOctokitError(`Error listing environments for '${owner}/${repo}'`, error);
+  }
+}
+
 export async function getEnvironment(
   owner: string,
   repo: string,

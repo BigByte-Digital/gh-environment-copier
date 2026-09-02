@@ -1,5 +1,5 @@
 // filepath: /Users/dom/projects/copy-github-env/src/variablesManager.ts
-import { getFilePath, getSourceEnvName } from "./userInput.js";
+import { pickEnvFile, pickEnvironment } from "./pickers.js";
 import { parseEnvFile } from "./fileUtils.js";
 import { listVariables, createOrUpdateVariable } from "./githubService.js";
 import type { Variable, SourceChoice } from "./types.js";
@@ -13,8 +13,8 @@ export async function processVariables(
   let variablesToProcess: Variable[] = [];
 
   if (variableSourceChoice.source === "file") {
-    const variableFilePath = await getFilePath(
-      "Enter the path to the variables file (e.g., variables.env):"
+    const variableFilePath = await pickEnvFile(
+      "Select the file to import VARIABLES from:"
     );
     if (variableFilePath) {
       const parsedVars = await parseEnvFile(variableFilePath);
@@ -27,8 +27,10 @@ export async function processVariables(
       console.log("No file path provided for variables. Skipping file import.");
     }
   } else if (variableSourceChoice.source === "env") {
-    const sourceEnvName = await getSourceEnvName(
-      "Enter the name of the SOURCE GitHub Actions environment to copy variables FROM:"
+    const sourceEnvName = await pickEnvironment(
+      owner,
+      repo,
+      "Select the SOURCE environment to copy variables FROM:"
     );
     if (sourceEnvName) {
       console.log(
