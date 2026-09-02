@@ -1,7 +1,7 @@
 import prompts from "prompts";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { pickEnvironment, pickRepo } from "./pickers.js";
+import { isRepoFullName, pickEnvironment, pickRepo } from "./pickers.js";
 import type { UserInputs, SourceChoice, SecretValueResponse } from "./types.js";
 
 const onCancel = () => {
@@ -31,8 +31,17 @@ export async function getInitialUserInput(): Promise<UserInputs> {
 
   // The environment pickers query the GitHub API, so the repository has to be
   // resolved before them rather than alongside them.
+  const repoFromEnv = process.env.REPO_FULL_NAME?.trim();
+  if (repoFromEnv && !isRepoFullName(repoFromEnv)) {
+    console.log(
+      `⚠️ REPO_FULL_NAME ('${repoFromEnv}') is not in owner/repo form and is being ignored.`
+    );
+  }
+
   const repoFullName =
-    process.env.REPO_FULL_NAME || (await pickRepo("Select the repository (owner/repo):"));
+    repoFromEnv && isRepoFullName(repoFromEnv)
+      ? repoFromEnv
+      : await pickRepo("Select the repository (owner/repo):");
   if (!repoFullName) {
     return { action };
   }
@@ -45,6 +54,10 @@ export async function getInitialUserInput(): Promise<UserInputs> {
       repo,
       "Select the SOURCE environment for diff:"
     );
+    if (!sourceEnvName) {
+      return { action, repoFullName };
+    }
+
     const compareEnvName = await pickEnvironment(
       owner,
       repo,
@@ -59,6 +72,10 @@ export async function getInitialUserInput(): Promise<UserInputs> {
       repo,
       "Select the environment to export:"
     );
+    if (!targetEnvName) {
+      return { action, repoFullName };
+    }
+
     const exportResponse = (await prompts(
       {
         type: "text",

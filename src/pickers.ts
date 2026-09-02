@@ -49,8 +49,13 @@ async function promptFromChoices(
   return response.value;
 }
 
+export function isRepoFullName(value: string): boolean {
+  const [owner, repo, ...rest] = value.split('/');
+  return Boolean(owner) && Boolean(repo) && rest.length === 0;
+}
+
 function validateRepoFullName(value: string): true | string {
-  return value.includes('/') ? true : 'Please use owner/repo format.';
+  return isRepoFullName(value) ? true : 'Please use owner/repo format.';
 }
 
 export async function pickEnvFile(message: string): Promise<string | undefined> {
