@@ -1,139 +1,105 @@
 import prompts from "prompts";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type {
-  UserInputs,
-  SourceChoice,
-  FilePathResponse,
-  SourceEnvNameResponse,
-  SecretValueResponse,
-} from "./types.js";
+import { isRepoFullName, pickEnvironment, pickRepo } from "./pickers.js";
+import type { UserInputs, SourceChoice, SecretValueResponse } from "./types.js";
+
+const onCancel = () => {
+  console.log("Operation cancelled by user.");
+};
 
 export async function getInitialUserInput(): Promise<UserInputs> {
-  const repoFullNameFromEnv = process.env.REPO_FULL_NAME;
-  const questions: prompts.PromptObject<keyof UserInputs>[] = [];
-
-  questions.push({
-    type: "select",
-    name: "action",
-    message: "What action do you want to perform?",
-    choices: [
-      { title: "Copy/Sync environments", value: "copy" },
-      { title: "Diff two environments", value: "diff" },
-      { title: "Export environment to file", value: "export" },
-    ],
-    initial: 0,
-  });
-
-  if (!repoFullNameFromEnv) {
-    questions.push({
-      type: "text",
-      name: "repoFullName",
-      message: "Enter the target repository name (e.g., owner/repo):",
-      validate: (value: string) =>
-        value.includes("/") ? true : "Please use owner/repo format.",
-    });
-  }
-
-  questions.push({
-    type: "text",
-    name: "targetEnvName",
-    message: "Enter the name of the TARGET GitHub Actions environment:",
-  });
-
-  const responses = (await prompts(questions, {
-    onCancel: () => {
-      // Handle cancellation if needed, e.g., set a flag or return specific values
-      console.log("Operation cancelled by user.");
-      // process.exit(0); // Or throw an error, or return a specific structure
+  const actionResponse = (await prompts(
+    {
+      type: "select",
+      name: "action",
+      message: "What action do you want to perform?",
+      choices: [
+        { title: "Copy/Sync environments", value: "copy" },
+        { title: "Diff two environments", value: "diff" },
+        { title: "Export environment to file", value: "export" },
+      ],
+      initial: 0,
     },
-  })) as UserInputs;
+    { onCancel }
+  )) as UserInputs;
 
-  // Conditional prompts for diff
-  if (responses.action === "diff") {
-    const diffQuestions: prompts.PromptObject<keyof UserInputs>[] = [];
-    if (!responses.repoFullName) {
-      // If repoFullName was not from env and not yet asked (it would be if action was asked first)
-      diffQuestions.push({
-        type: "text",
-        name: "repoFullName",
-        message: "Enter the repository name for diff (e.g., owner/repo):",
-        validate: (value: string) =>
-          value.includes("/") ? true : "Please use owner/repo format.",
-      });
-    }
-    diffQuestions.push(
-      {
-        type: "text",
-        name: "sourceEnvName",
-        message: "Enter the name of the SOURCE environment for diff:",
-      },
-      {
-        type: "text",
-        name: "compareEnvName",
-        message: "Enter the name of the COMPARE environment for diff:",
-      }
-    );
-    const diffResponses = (await prompts(diffQuestions, {
-      onCancel: () => {
-        console.log("Operation cancelled by user.");
-      },
-    })) as UserInputs;
-    responses.repoFullName =
-      responses.repoFullName || diffResponses.repoFullName;
-    responses.sourceEnvName = diffResponses.sourceEnvName;
-    responses.compareEnvName = diffResponses.compareEnvName;
-  } else if (responses.action === "copy") {
-    // Ensure targetEnvName is asked if not already (it should be in the initial batch)
-    if (!responses.targetEnvName) {
-      const targetNameQ: prompts.PromptObject<keyof UserInputs> = {
-        type: "text",
-        name: "targetEnvName",
-        message:
-          "Enter the name of the TARGET GitHub Actions environment for copy/sync:",
-      };
-      const targetNameResponse = (await prompts(targetNameQ, {
-        onCancel: () => {
-          console.log("Operation cancelled by user.");
-        },
-      })) as UserInputs;
-      responses.targetEnvName = targetNameResponse.targetEnvName;
-    }
-  } else if (responses.action === "export") {
-    // For export, we need the environment name to export and optionally a file path
-    if (!responses.targetEnvName) {
-      const exportQuestions: prompts.PromptObject<keyof UserInputs>[] = [
-        {
-          type: "text",
-          name: "targetEnvName",
-          message: "Enter the name of the environment to export:",
-        },
-        {
-          type: "text",
-          name: "exportFilePath",
-          message:
-            "Enter the output file path (optional, will auto-generate if empty):",
-          initial: "",
-        },
-      ];
-      const exportResponses = (await prompts(exportQuestions, {
-        onCancel: () => {
-          console.log("Operation cancelled by user.");
-        },
-      })) as UserInputs;
-      responses.targetEnvName = exportResponses.targetEnvName;
-      responses.exportFilePath = exportResponses.exportFilePath;
-    }
+  const action = actionResponse.action;
+  if (!action) {
+    return {};
   }
 
-  return {
-    action: responses.action,
-    repoFullName: repoFullNameFromEnv || responses.repoFullName,
-    targetEnvName: responses.targetEnvName,
-    sourceEnvName: responses.sourceEnvName,
-    compareEnvName: responses.compareEnvName,
-    exportFilePath: responses.exportFilePath,
-  };
+  // The environment pickers query the GitHub API, so the repository has to be
+  // resolved before them rather than alongside them.
+  const repoFromEnv = process.env.REPO_FULL_NAME?.trim();
+  if (repoFromEnv && !isRepoFullName(repoFromEnv)) {
+    console.log(
+      `⚠️ REPO_FULL_NAME ('${repoFromEnv}') is not in owner/repo form and is being ignored.`
+    );
+  }
+
+  const repoFullName =
+    repoFromEnv && isRepoFullName(repoFromEnv)
+      ? repoFromEnv
+      : await pickRepo("Select the repository (owner/repo):");
+  if (!repoFullName) {
+    return { action };
+  }
+
+  const [owner, repo] = repoFullName.split("/");
+
+  if (action === "diff") {
+    const sourceEnvName = await pickEnvironment(
+      owner,
+      repo,
+      "Select the SOURCE environment for diff:"
+    );
+    if (!sourceEnvName) {
+      return { action, repoFullName };
+    }
+
+    const compareEnvName = await pickEnvironment(
+      owner,
+      repo,
+      "Select the COMPARE environment for diff:"
+    );
+    return { action, repoFullName, sourceEnvName, compareEnvName };
+  }
+
+  if (action === "export") {
+    const targetEnvName = await pickEnvironment(
+      owner,
+      repo,
+      "Select the environment to export:"
+    );
+    if (!targetEnvName) {
+      return { action, repoFullName };
+    }
+
+    const exportResponse = (await prompts(
+      {
+        type: "text",
+        name: "exportFilePath",
+        message: "Enter the output file path (optional, will auto-generate if empty):",
+        initial: "",
+      },
+      { onCancel }
+    )) as UserInputs;
+    return {
+      action,
+      repoFullName,
+      targetEnvName,
+      exportFilePath: exportResponse.exportFilePath,
+    };
+  }
+
+  const targetEnvName = await pickEnvironment(
+    owner,
+    repo,
+    "Select the TARGET GitHub Actions environment:",
+    { allowCreate: true }
+  );
+  return { action, repoFullName, targetEnvName };
 }
 
 export async function offerTokenCreationGuidance(): Promise<void> {
@@ -257,28 +223,6 @@ export async function getSecretSourceChoice(): Promise<SourceChoice> {
     ],
     initial: 2, // Default to skip
   })) as SourceChoice;
-}
-
-export async function getFilePath(
-  promptMessage: string
-): Promise<string | undefined> {
-  const response = (await prompts({
-    type: "text",
-    name: "path",
-    message: promptMessage,
-  })) as FilePathResponse;
-  return response.path;
-}
-
-export async function getSourceEnvName(
-  promptMessage: string
-): Promise<string | undefined> {
-  const response = (await prompts({
-    type: "text",
-    name: "name",
-    message: promptMessage,
-  })) as SourceEnvNameResponse;
-  return response.name;
 }
 
 export async function getSecretValue(

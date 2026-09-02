@@ -1,7 +1,8 @@
 // filepath: /Users/dom/projects/copy-github-env/src/secretsManager.ts
 import { parseEnvFile } from "./fileUtils.js";
 import { listSecrets, createOrUpdateSecret } from "./githubService.js";
-import { getFilePath, getSourceEnvName, getSecretValue } from "./userInput.js";
+import { pickEnvFile, pickEnvironment } from "./pickers.js";
+import { getSecretValue } from "./userInput.js";
 import type { Secret, SourceChoice } from "./types.js";
 
 export async function processSecrets(
@@ -16,8 +17,8 @@ export async function processSecrets(
   let promptForSecretValues = false;
 
   if (secretSourceChoice.source === "file") {
-    const secretFilePath = await getFilePath(
-      "Enter the path to the secrets file (e.g., secrets.env):"
+    const secretFilePath = await pickEnvFile(
+      "Select the file to import SECRETS from:"
     );
     if (secretFilePath) {
       const parsedSecrets = await parseEnvFile(secretFilePath);
@@ -30,8 +31,10 @@ export async function processSecrets(
       console.log("No file path provided for secrets. Skipping file import.");
     }
   } else if (secretSourceChoice.source === "env") {
-    const sourceEnvName = await getSourceEnvName(
-      "Enter the name of the SOURCE GitHub Actions environment to copy secret names FROM:"
+    const sourceEnvName = await pickEnvironment(
+      owner,
+      repo,
+      "Select the SOURCE environment to copy secret names FROM:"
     );
     if (sourceEnvName) {
       console.log(

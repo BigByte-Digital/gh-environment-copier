@@ -91,12 +91,6 @@ async function main() {
     return;
   }
 
-  // Default action is "copy"
-  if (!targetEnvName) {
-    console.log("Target environment name is required for copy/sync.");
-    return;
-  }
-
   console.log(
     `\n🎯 Setting up TARGET environment '${targetEnvName}' for repo '${owner}/${repo}'...`
   );

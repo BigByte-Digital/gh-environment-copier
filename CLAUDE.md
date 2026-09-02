@@ -30,22 +30,35 @@ runs `pnpm lint` + `pnpm build` on pushes/PRs to `main`, so keep both green.
   if installed and logged in) → an `AuthError`. So `GITHUB_TOKEN` is optional when `gh` is authenticated.
   `main()` primes auth up front via `getOctokit()` so the `AuthError` guidance prints and the process
   exits non-zero for every action.
-- `REPO_FULL_NAME` (optional) pre-fills the `owner/repo` prompt.
+- `REPO_FULL_NAME` (optional) skips the repository picker entirely.
 
 ## Architecture
 
 The flow is a thin layered pipeline; `src/index.ts::main()` is the orchestrator and branches on one of
 three `action`s (`copy` | `diff` | `export`):
 
-- **`userInput.ts`** — all `prompts`-based interaction. `getInitialUserInput()` returns a `UserInputs`
-  object; the remaining exports are per-step prompt helpers (`getFilePath`, `getSourceEnvName`,
-  `getSecretValue`, source-choice pickers) that the manager modules call mid-flow.
+- **`userInput.ts`** — the action/source-choice prompts. `getInitialUserInput()` returns a `UserInputs`
+  object by asking action → repository → environment(s) **in sequence**: the environment pickers query
+  the API, so the repository must resolve before them and the three cannot be batched into one
+  `prompts()` call. `getSecretValue` and the source-choice pickers are called mid-flow by the managers.
+- **`pickers.ts`** — the list-driven prompts. `pickEnvFile` (autocomplete over scanned `.env` files),
+  `pickRepo` (autocomplete over `listRepositories()`, with the git-remote repo pinned first) and
+  `pickEnvironment` (select over `listEnvironments()`, `allowCreate` adds a create-new entry). Every
+  picker keeps a manual-entry escape hatch and degrades to a plain text prompt when its list is empty
+  or the API call fails, so an unlistable repo or environment is never a dead end.
+- **`envFileScanner.ts`** — `findEnvFiles(root)` walks to depth 2, skipping dot-directories and
+  `node_modules`/`dist`/`build`/`coverage`/`vendor`/`tmp`, matching `.env`, `.env.*` and `*.env`. Entry
+  counts come from parsing each match; files over 512 KB are listed with a count of 0 rather than read.
+- **`git.ts`** — `detectRepoFullName()` parses `git remote get-url origin` into `owner/repo`, handling
+  SSH and HTTPS forms. Returns `null` whenever git is unavailable or the cwd is not a repository.
 - **`auth.ts`** — token resolution only. `resolveGitHubToken()` returns `{ token, source: 'env' | 'gh' }`
   or throws `AuthError`; `env`/`getGhToken` are injectable for testing. The `gh` path shells out to
   `gh auth token` and treats gh-missing/not-logged-in as "unavailable" (falls through, never errors).
 - **`githubService.ts`** — the **only** module that constructs `Octokit` and touches the GitHub API
-  (`getEnvironment`, `createEnvironment`, `list/createOrUpdate` for variables & secrets, public-key
-  fetch). Octokit is built **lazily** via the exported, memoized `getOctokit()` (which calls
+  (`listRepositories`, `listEnvironments`, `getEnvironment`, `createEnvironment`,
+  `list/createOrUpdate` for variables & secrets, public-key fetch). `listRepositories` stops after 5
+  pages (500 repos) to keep the picker responsive; `listEnvironments` returns `[]` on 403/404.
+  Octokit is built **lazily** via the exported, memoized `getOctokit()` (which calls
   `resolveGitHubToken()`) — no import-time side effects. Throwing paths funnel through
   `handleOctokitError`; `getEnvironment` returns `null` on 404, and `createOrUpdate{Variable,Secret}`
   intentionally log-and-continue (do **not** throw).
