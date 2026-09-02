@@ -28,8 +28,11 @@ runs `pnpm lint` + `pnpm build` on pushes/PRs to `main`, so keep both green.
 - A GitHub token is resolved by `src/auth.ts::resolveGitHubToken()` in priority order:
   `GITHUB_TOKEN` env (a PAT with `repo` scope, typically in `.env`) → `gh auth token` (the GitHub CLI,
   if installed and logged in) → an `AuthError`. So `GITHUB_TOKEN` is optional when `gh` is authenticated.
-  `main()` primes auth up front via `getOctokit()` so the `AuthError` guidance prints and the process
-  exits non-zero for every action.
+  Each candidate is **validated** before it is used (`GET /user`, supplied as the `validate` dep by
+  `githubService.ts`): a 401 moves resolution on to the next source, so an expired `.env` token does not
+  strand a working `gh` login, while any other failure is rethrown rather than misread as a bad token.
+  `main()` primes auth up front via `getOctokit()` so the guidance prints and the process exits
+  non-zero for every action.
 - `REPO_FULL_NAME` (optional) skips the repository picker entirely.
 
 ## Architecture
@@ -51,9 +54,13 @@ three `action`s (`copy` | `diff` | `export`):
   counts come from parsing each match; files over 512 KB are listed with a count of 0 rather than read.
 - **`git.ts`** — `detectRepoFullName()` parses `git remote get-url origin` into `owner/repo`, handling
   SSH and HTTPS forms. Returns `null` whenever git is unavailable or the cwd is not a repository.
-- **`auth.ts`** — token resolution only. `resolveGitHubToken()` returns `{ token, source: 'env' | 'gh' }`
-  or throws `AuthError`; `env`/`getGhToken` are injectable for testing. The `gh` path shells out to
-  `gh auth token` and treats gh-missing/not-logged-in as "unavailable" (falls through, never errors).
+- **`auth.ts`** — token resolution only; it never imports Octokit. `resolveGitHubToken()` returns
+  `{ token, source: 'env' | 'gh' }` or throws `AuthError`; `env`/`getGhToken`/`validate` are injectable
+  for testing. Sources are read lazily, so `gh` is not invoked while `GITHUB_TOKEN` is accepted. The
+  `gh` path shells out to `gh auth token` and treats gh-missing/not-logged-in as "unavailable" (falls
+  through, never errors). It **withholds `GITHUB_TOKEN`/`GH_TOKEN` from the child process** — gh
+  prefers those over its stored credential and echoes them back, which would return the very token the
+  fallback exists to replace.
 - **`githubService.ts`** — the **only** module that constructs `Octokit` and touches the GitHub API
   (`listRepositories`, `listEnvironments`, `getEnvironment`, `createEnvironment`,
   `list/createOrUpdate` for variables & secrets, public-key fetch). `listRepositories` stops after 5
