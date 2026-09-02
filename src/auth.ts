@@ -38,7 +38,7 @@ function buildAuthErrorMessage(rejected: TokenSource[]): string {
 
   const sources = rejected.map(describeTokenSource).join(' and ');
   return [
-    `GitHub rejected every token available (${sources}). Replace the expired credential:`,
+    `GitHub rejected every token available (${sources}). Authenticate with a working credential:`,
     ...AUTH_OPTIONS,
   ].join('\n');
 }
