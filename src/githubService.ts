@@ -1,5 +1,5 @@
 import { Octokit } from "@octokit/rest";
-import { resolveGitHubToken } from "./auth.js";
+import { type ResolvedToken, describeTokenSource, resolveGitHubToken } from "./auth.js";
 import { encryptSecret } from "./encryptionUtils.js";
 import type {
   GitHubEnvironment,
@@ -11,11 +11,32 @@ import type {
 
 let octokitPromise: Promise<Octokit> | null = null;
 
+// Confirms GitHub accepts the candidate before the rest of the run depends on it. A 401
+// rejects that source so resolution can try the next one; anything else (an outage, a rate
+// limit) is surfaced as itself rather than misread as a bad credential.
+async function isTokenAccepted(candidate: ResolvedToken): Promise<boolean> {
+  const source = describeTokenSource(candidate.source);
+  try {
+    const { data } = await new Octokit({ auth: candidate.token }).rest.users.getAuthenticated();
+    console.log(`✅ Authenticated as ${data.login} via ${source}.`);
+    return true;
+  } catch (error) {
+    if ((error as OctokitError).status === 401) {
+      console.log(`⚠️ The GitHub token from ${source} was rejected (401).`);
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function buildOctokit(): Promise<Octokit> {
+  const { token } = await resolveGitHubToken({ validate: isTokenAccepted });
+  return new Octokit({ auth: token });
+}
+
 export async function getOctokit(): Promise<Octokit> {
   if (!octokitPromise) {
-    octokitPromise = resolveGitHubToken().then(
-      ({ token }) => new Octokit({ auth: token })
-    );
+    octokitPromise = buildOctokit();
   }
   return octokitPromise;
 }
