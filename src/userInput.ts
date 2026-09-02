@@ -15,7 +15,7 @@ export async function getInitialUserInput(): Promise<UserInputs> {
       name: "action",
       message: "What action do you want to perform?",
       choices: [
-        { title: "Copy/Sync environments", value: "copy" },
+        { title: "Copy/Sync/Import environments", value: "copy" },
         { title: "Diff two environments", value: "diff" },
         { title: "Export environment to file", value: "export" },
       ],
