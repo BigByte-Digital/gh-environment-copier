@@ -260,7 +260,7 @@ export async function createOrUpdateSecret(
   value: string,
   environment_public_key: string,
   environment_public_key_id: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     const octokit = await getOctokit();
     const encryptedValue = await encryptSecret(value, environment_public_key);
@@ -283,6 +283,7 @@ export async function createOrUpdateSecret(
         `  Secret '${secret_name}' set/updated in '${environment_name}'.`
       );
     }
+    return true;
   } catch (error) {
     const octokitError = error as OctokitError;
     console.error(
@@ -297,6 +298,31 @@ export async function createOrUpdateSecret(
     }
     console.error(
       `  Ensure your PAT has 'repo' scope and you have admin rights to the repository.`
+    );
+    return false;
+  }
+}
+
+export async function deleteVariable(
+  owner: string,
+  repo: string,
+  environment_name: string,
+  variable_name: string
+): Promise<void> {
+  try {
+    const octokit = await getOctokit();
+    await octokit.rest.actions.deleteEnvironmentVariable({
+      owner,
+      repo,
+      environment_name,
+      name: variable_name,
+    });
+    console.log(`  Variable '${variable_name}' deleted from '${environment_name}'.`);
+  } catch (error) {
+    const octokitError = error as OctokitError;
+    console.error(
+      `  Error deleting variable '${variable_name}' from '${environment_name}':`,
+      octokitError.message
     );
   }
 }

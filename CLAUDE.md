@@ -68,7 +68,19 @@ three `action`s (`copy` | `diff` | `export`):
   Octokit is built **lazily** via the exported, memoized `getOctokit()` (which calls
   `resolveGitHubToken()`) — no import-time side effects. Throwing paths funnel through
   `handleOctokitError`; `getEnvironment` returns `null` on 404, and `createOrUpdate{Variable,Secret}`
-  intentionally log-and-continue (do **not** throw).
+  and `deleteVariable` intentionally log-and-continue (do **not** throw). `createOrUpdateSecret`
+  returns whether the write succeeded, so a caller can avoid deleting a plaintext copy whose
+  encrypted replacement never landed.
+- **`importFromFile.ts`** — the whole `file` source path for copy/sync: pick file → parse → classify →
+  write both kinds. Choosing a file at the VARIABLES prompt means the file is fully accounted for, so
+  `index.ts` **skips the SECRETS prompt** entirely. A key marked secret that already exists as a
+  plaintext variable in the target is offered for deletion (one confirmation for the whole set), and
+  only a key whose encrypted copy actually landed gives its plaintext one up.
+- **`entryTriage.ts`** — the classification screen. `guessKind()` seeds each row from the name; the
+  operator corrects it. A raw-mode `readline` list (↑↓, `s`, `v`, Enter, Esc) with 🔒/🔓 icons and a
+  12-row scrolling viewport — `prompts` cannot bind arbitrary keys, hence the hand-rolled TUI.
+  Requires a TTY: callers check `process.stdin.isTTY` and abort rather than guess unattended.
+  Cancelling returns `null` and nothing is written.
 - **`variablesManager.ts` / `secretsManager.ts`** — resolve the chosen source (`env` GitHub environment,
   local `file`, or `skip`), then create/update entries in the target env. Secrets copied from another
   environment carry **names only** — the tool re-prompts for each value (GitHub never exposes secret

@@ -197,7 +197,10 @@ export async function getVariableSourceChoice(): Promise<SourceChoice> {
     message: "How do you want to source VARIABLES?",
     choices: [
       { title: "Copy from a source GitHub Environment", value: "env" },
-      { title: "Import from a local .env file", value: "file" },
+      {
+        title: "Import a local .env file (mark each key variable or secret)",
+        value: "file",
+      },
       { title: "Skip variable processing", value: "skip" },
     ],
     initial: 2, // Default to skip
